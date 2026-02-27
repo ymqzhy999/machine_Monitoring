@@ -2216,3 +2216,60 @@
 2026-02-27 15:27:28,703 - INFO - 127.0.0.1 - - [27/Feb/2026 15:27:28] "[36mGET /static/css/cdn_css3.css HTTP/1.1[0m" 304 -
 2026-02-27 15:27:28,703 - INFO - 127.0.0.1 - - [27/Feb/2026 15:27:28] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
 2026-02-27 15:27:28,731 - INFO - 127.0.0.1 - - [27/Feb/2026 15:27:28] "POST /api/bottleneck-analysis HTTP/1.1" 200 -
+2026-02-27 15:28:34,032 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:34] "GET /resource HTTP/1.1" 200 -
+2026-02-27 15:28:34,050 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:34] "[36mGET /static/css/cdn_css1.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:34,051 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:34] "[36mGET /static/css/cdn_css2.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:34,051 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:34] "[36mGET /static/css/cdn_css3.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:34,075 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:34] "POST /api/resource-analysis HTTP/1.1" 200 -
+2026-02-27 15:28:43,156 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:43] "GET /time HTTP/1.1" 200 -
+2026-02-27 15:28:43,175 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:43] "[36mGET /static/css/cdn_css1.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:43,176 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:43] "[36mGET /static/css/cdn_css2.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:43,177 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:43] "[36mGET /static/css/cdn_css3.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:43,203 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:43] "POST /api/time-analysis HTTP/1.1" 200 -
+2026-02-27 15:28:43,729 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:43] "GET /quality HTTP/1.1" 200 -
+2026-02-27 15:28:43,744 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:43] "[36mGET /static/css/cdn_css1.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:43,745 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:43] "[36mGET /static/css/cdn_css2.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:43,745 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:43] "[36mGET /static/css/cdn_css3.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:54,645 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:54] "GET /time HTTP/1.1" 200 -
+2026-02-27 15:28:54,669 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:54] "[36mGET /static/css/cdn_css1.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:54,669 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:54] "[36mGET /static/css/cdn_css2.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:54,670 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:54] "[36mGET /static/css/cdn_css3.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:54,694 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:54] "POST /api/time-analysis HTTP/1.1" 200 -
+2026-02-27 15:28:55,214 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:55] "GET /quality HTTP/1.1" 200 -
+2026-02-27 15:28:55,230 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:55] "[36mGET /static/css/cdn_css1.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:55,232 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:55] "[36mGET /static/css/cdn_css2.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:55,232 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:55] "[36mGET /static/css/cdn_css3.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:55,540 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:55] "GET /time HTTP/1.1" 200 -
+2026-02-27 15:28:55,571 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:55] "[36mGET /static/css/cdn_css1.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:55,572 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:55] "[36mGET /static/css/cdn_css2.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:55,573 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:55] "[36mGET /static/css/cdn_css3.css HTTP/1.1[0m" 304 -
+2026-02-27 15:28:55,620 - INFO - 127.0.0.1 - - [27/Feb/2026 15:28:55] "POST /api/time-analysis HTTP/1.1" 200 -
+2026-02-27 15:31:43,967 - INFO -  * Detected change in 'F:\\毕业设计2\\efficiency_analysis.py', reloading
+2026-02-27 15:31:44,124 - INFO -  * Restarting with stat
+2026-02-27 15:31:45,344 - WARNING -  * Debugger is active!
+2026-02-27 15:31:45,364 - INFO -  * Debugger PIN: 642-549-579
+2026-02-27 15:32:17,810 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-02-27 15:32:17,810 - INFO - [33mPress CTRL+C to quit[0m
+2026-02-27 15:32:17,813 - INFO -  * Restarting with stat
+2026-02-27 15:32:19,076 - WARNING -  * Debugger is active!
+2026-02-27 15:32:19,112 - INFO -  * Debugger PIN: 642-549-579
+2026-02-27 15:33:34,315 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+2026-02-27 15:33:34,315 - INFO - [33mPress CTRL+C to quit[0m
+2026-02-27 15:33:34,318 - INFO -  * Restarting with stat
+2026-02-27 15:33:35,505 - WARNING -  * Debugger is active!
+2026-02-27 15:33:35,527 - INFO -  * Debugger PIN: 642-549-579
+2026-02-27 15:33:41,566 - INFO -  * Detected change in 'F:\\毕业设计2\\efficiency_analyzer.py', reloading
+2026-02-27 15:33:41,659 - INFO -  * Detected change in 'F:\\毕业设计2\\efficiency_analyzer.py', reloading
+2026-02-27 15:33:41,709 - INFO -  * Restarting with stat
+2026-02-27 15:33:41,834 - INFO -  * Restarting with stat
+2026-02-27 15:33:42,771 - WARNING -  * Debugger is active!
+2026-02-27 15:33:42,795 - INFO -  * Debugger PIN: 642-549-579
+2026-02-27 15:33:43,039 - WARNING -  * Debugger is active!
+2026-02-27 15:33:43,059 - INFO -  * Debugger PIN: 642-549-579
+2026-02-27 15:33:45,656 - INFO - 127.0.0.1 - - [27/Feb/2026 15:33:45] "GET / HTTP/1.1" 200 -
+2026-02-27 15:33:46,081 - INFO - 127.0.0.1 - - [27/Feb/2026 15:33:46] "[36mGET /static/css/cdn_css1.css HTTP/1.1[0m" 304 -
+2026-02-27 15:33:46,157 - INFO - 127.0.0.1 - - [27/Feb/2026 15:33:46] "[36mGET /static/css/cdn_css3.css HTTP/1.1[0m" 304 -
+2026-02-27 15:33:46,158 - INFO - 127.0.0.1 - - [27/Feb/2026 15:33:46] "[36mGET /static/css/cdn_css2.css HTTP/1.1[0m" 304 -
+2026-02-27 15:33:46,751 - INFO - 127.0.0.1 - - [27/Feb/2026 15:33:46] "GET /api/metrics/latest?_t=1772177626227&refresh=true HTTP/1.1" 200 -
