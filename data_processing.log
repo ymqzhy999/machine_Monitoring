@@ -2273,3 +2273,4 @@
 2026-02-27 15:33:46,157 - INFO - 127.0.0.1 - - [27/Feb/2026 15:33:46] "[36mGET /static/css/cdn_css3.css HTTP/1.1[0m" 304 -
 2026-02-27 15:33:46,158 - INFO - 127.0.0.1 - - [27/Feb/2026 15:33:46] "[36mGET /static/css/cdn_css2.css HTTP/1.1[0m" 304 -
 2026-02-27 15:33:46,751 - INFO - 127.0.0.1 - - [27/Feb/2026 15:33:46] "GET /api/metrics/latest?_t=1772177626227&refresh=true HTTP/1.1" 200 -
+2026-02-27 15:36:47,228 - INFO - 127.0.0.1 - - [27/Feb/2026 15:36:47] "GET /api/metrics/latest?_t=1772177807226&refresh=false HTTP/1.1" 200 -
