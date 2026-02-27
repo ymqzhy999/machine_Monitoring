@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}质量分析 - 生产效率分析系统{% endblock %}
+
+{% block page_title %}质量分析{% endblock %}
+
+{% block content %}
+<div class="data-filters">
+    <div class="row">
+        <div class="col-md-6">
+            <label for="dateRange" class="form-label">选择日期范围</label>
+            <input type="text" class="form-control" id="dateRange">
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">产品质量分布</h5>
+                <div class="chart-container">
+                    <canvas id="qualityDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">质量趋势分析</h5>
+                <div class="chart-container">
+                    <canvas id="qualityTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">质量指标详情</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>指标</th>
+                                <th>总产品数量</th>
+                                <th>合格产品数量</th>
+                                <th>不合格率(%)</th>
+                                <th>质量合格率(%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qualityTable">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let qualityDistributionChart, qualityTrendChart;
+
+// 初始化日期选择器
+$(document).ready(function() {
+    initDateRangePicker(function(start, end) {
+        updateQualityAnalysis(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'));
+    });
+    // 初始加载数据
+    const start = moment().subtract(7, 'days');
+    const end = moment();
+    updateQualityAnalysis(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'));
+});
+
+async function updateQualityAnalysis(start_time, end_time) {
+    const data = await fetchAnalysisData('quality-analysis', {
+        start_time: start_time,
+        end_time: end_time
+    });
+    
+    if (data) {
+        updateQualityDistributionChart(data);
+        updateQualityTrendChart(data);
+        updateQualityTable(data);
+    }
+}
+
+function updateQualityDistributionChart(data) {
+    if (qualityDistributionChart) qualityDistributionChart.destroy();
+    
+    const total = data.total_products;
+    const qualified = data.qualified_products;
+    const defective = total - qualified;
+    
+    qualityDistributionChart = createChart(
+        'qualityDistributionChart',
+        'pie',
+        [qualified, defective],
+        ['合格品', '不合格品'],
+        '产品质量分布'
+    );
+}
+
+function updateQualityTrendChart(data) {
+    if (qualityTrendChart) qualityTrendChart.destroy();
+    
+    qualityTrendChart = new Chart(document.getElementById('qualityTrendChart'), {
+        type: 'line',
+        data: {
+            labels: ['合格率', '不合格率'],
+            datasets: [{
+                label: '百分比(%)',
+                data: [
+                    data.quality_rate,
+                    data.defect_rate
+                ],
+                borderColor: 'rgba(75, 192, 192, 1)',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: '质量指标趋势'
+                }
+            }
+        }
+    });
+}
+
+function updateQualityTable(data) {
+    const tableBody = document.getElementById('qualityTable');
+    tableBody.innerHTML = '';
+    
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td>产品质量</td>
+        <td>${data.total_products}</td>
+        <td>${data.qualified_products}</td>
+        <td>${data.defect_rate.toFixed(2)}</td>
+        <td>${data.quality_rate.toFixed(2)}</td>
+    `;
+    tableBody.appendChild(row);
+}
+</script>
+{% endblock %} 

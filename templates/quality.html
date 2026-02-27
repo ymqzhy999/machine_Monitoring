@@ -1,0 +1,822 @@
+{% extends "base.html" %}
+
+{% block title %}质量分析 - 生产效率分析系统{% endblock %}
+
+{% block page_title %}质量分析{% endblock %}
+
+{% block content %}
+<div class="data-filters mb-4">
+    <div class="row align-items-end">
+        <div class="col-md-6">
+            <label for="dateRange" class="form-label">选择日期范围</label>
+            <input type="text" class="form-control" id="dateRange">
+        </div>
+        <div class="col-md-6 text-end">
+            <button type="button" class="btn btn-primary" id="refreshButton">
+                <i class="fas fa-sync-alt"></i> 刷新数据
+            </button>
+            <div class="form-text text-end">从主页导入的数据将自动用于分析</div>
+        </div>
+    </div>
+</div>
+
+<!-- 质量概览卡片 -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">质量概览</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <h6>总产品数量</h6>
+                                <h2 id="totalProducts">--</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h6>合格产品数量</h6>
+                                <h2 id="qualifiedProducts">--</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body text-center">
+                                <h6>不合格率</h6>
+                                <h2 id="defectRate">--.--% </h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body text-center">
+                                <h6>质量合格率</h6>
+                                <h2 id="qualityRate">--.--% </h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">质量趋势分析</h5>
+                <div id="loadingTrend" class="text-center my-5 d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                </div>
+                <div class="chart-container" style="position: relative; height: 350px;">
+                    <canvas id="qualityTrendChart"></canvas>
+                </div>
+                <div id="noDataTrend" class="alert alert-warning text-center my-3 d-none">
+                    没有可用的质量趋势数据。请导入数据或选择其他日期范围。
+                </div>
+                <div class="mt-3 text-center text-muted small" id="dataSourceNote">
+                    <div class="row">
+                        <div class="col-md-6 offset-md-3">
+                            <div class="alert alert-info p-2">
+                                <i class="fas fa-info-circle me-1"></i> 图表展示合格率和不合格率的趋势变化，帮助您监控产品质量波动
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">质量指标详情</h5>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>指标</th>
+                                <th>总产品数量</th>
+                                <th>合格产品数量</th>
+                                <th>不合格产品数量</th>
+                                <th>不合格率(%)</th>
+                                <th>质量合格率(%)</th>
+                                <th>数据来源</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qualityTable">
+                            <tr>
+                                <td colspan="7" class="text-center">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 质量分析洞察 -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">质量分析洞察</h5>
+                <div id="qualityInsights">
+                    <div class="alert alert-info">加载质量分析洞察中...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 通知容器 -->
+<div class="toast-container position-fixed top-0 end-0 p-3"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let qualityDistributionChart, qualityTrendChart;
+let qualityData = null;
+let isVirtualData = false;
+
+// 初始化日期选择器
+$(document).ready(function() {
+    // 首先检查会话存储中是否有质量分析数据
+    try {
+        const cachedData = sessionStorage.getItem('qualityAnalysisData');
+        if (cachedData) {
+            qualityData = JSON.parse(cachedData);
+            isVirtualData = qualityData.is_virtual || false;
+            console.log('从会话存储恢复质量分析数据');
+            
+            // 如果没有质量缓存键，创建一个
+            if (!sessionStorage.getItem('qualityDataCacheKey')) {
+                sessionStorage.setItem('qualityDataCacheKey', Date.now().toString());
+            }
+        }
+    } catch (e) {
+        console.error('从会话存储加载数据失败:', e);
+    }
+    
+    // 检查是否有会话存储的数据
+    checkSessionStorage();
+    
+    // 初始化日期选择器和更新接口
+    initDateRangePicker(function(start, end) {
+        // 只在日期变化时强制刷新数据
+        const forceFetch = $('#refreshButton').data('dateChanged') || false;
+        $('#refreshButton').data('dateChanged', false);
+        updateQualityAnalysis(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'), forceFetch);
+    });
+    
+    // 监听日期变化事件
+    $('#dateRange').on('apply.daterangepicker', function(ev, picker) {
+        // 标记日期已变化，需要刷新数据
+        $('#refreshButton').data('dateChanged', true);
+    });
+    
+    // 初始加载数据，如果会话中没有数据则强制获取
+    const start = moment().subtract(7, 'days');
+    const end = moment();
+    updateQualityAnalysis(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'), !qualityData);
+    
+    // 刷新按钮事件
+    $('#refreshButton').click(function() {
+        const dateRange = $('#dateRange').val();
+        const dates = dateRange.split(' - ');
+        const startDate = dates[0];
+        const endDate = dates[1];
+        
+        // 显示加载动画
+        $(this).html('<i class="fas fa-spinner fa-spin"></i> 刷新中...');
+        $(this).prop('disabled', true);
+        
+        // 检查是否要强制从服务器刷新数据
+        // 基本上只有在日期范围变化或明确需要时才强制刷新
+        const forceFetch = $(this).data('forceFetch') || false;
+        
+        // 更新数据，通常使用现有数据
+        updateQualityAnalysis(startDate, endDate, forceFetch).finally(() => {
+            // 恢复按钮
+            $(this).html('<i class="fas fa-sync-alt"></i> 刷新数据');
+            $(this).prop('disabled', false);
+            $(this).data('forceFetch', false); // 重置强制刷新标志
+            
+            // 显示刷新完成的通知
+            if (!forceFetch) {
+                showToast('图表已刷新', 'info');
+            } else {
+                showToast('数据已从服务器刷新', 'success');
+            }
+        });
+    });
+    
+    // 添加强制刷新按钮
+    $('.col-md-6.text-end').append(`
+        <button type="button" class="btn btn-outline-warning ms-2" id="forceRefreshButton">
+            <i class="fas fa-cloud-download-alt"></i> 强制更新
+        </button>
+    `);
+    
+    // 强制刷新按钮事件
+    $('#forceRefreshButton').click(function() {
+        // 设置刷新按钮的强制刷新标志
+        $('#refreshButton').data('forceFetch', true);
+        // 重置缓存键
+        sessionStorage.setItem('qualityDataCacheKey', Date.now().toString());
+        // 触发刷新按钮点击
+        $('#refreshButton').click();
+    });
+});
+
+// 检查会话存储是否有主页导入的数据
+function checkSessionStorage() {
+    try {
+        const mainPageData = sessionStorage.getItem('mainPageMetricsData');
+        if (mainPageData) {
+            const dataObj = JSON.parse(mainPageData);
+            if (dataObj && Object.keys(dataObj).length > 0) {
+                showToast('从主页检测到已导入的数据', 'info');
+                console.log('从主页检测到数据:', Object.keys(dataObj).length, '个设备');
+            }
+        }
+    } catch (error) {
+        console.error('读取会话存储数据出错:', error);
+    }
+}
+
+// 更新页面显示的通知信息
+function showToast(message, type = 'info') {
+    const toastContainer = document.querySelector('.toast-container');
+    const toastEl = document.createElement('div');
+    toastEl.className = `toast show bg-${type} text-white`;
+    toastEl.innerHTML = `
+        <div class="toast-header bg-${type} text-white">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong class="me-auto">系统通知</strong>
+            <small>${new Date().toLocaleTimeString()}</small>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">${message}</div>
+    `;
+    toastContainer.appendChild(toastEl);
+    
+    setTimeout(() => {
+        toastEl.classList.remove('show');
+        setTimeout(() => toastEl.remove(), 300);
+    }, 3000);
+}
+
+// 处理图表显示无数据情况
+function toggleNoDataMessage(chartId, loading, hasData) {
+    const loadingEl = document.getElementById(`loading${chartId}`);
+    const noDataEl = document.getElementById(`noData${chartId}`);
+    const chartContainer = document.getElementById(`quality${chartId}Chart`).parentElement;
+    
+    if (loading) {
+        loadingEl.classList.remove('d-none');
+        noDataEl.classList.add('d-none');
+        chartContainer.classList.add('d-none');
+    } else if (!hasData) {
+        loadingEl.classList.add('d-none');
+        noDataEl.classList.remove('d-none');
+        chartContainer.classList.add('d-none');
+    } else {
+        loadingEl.classList.add('d-none');
+        noDataEl.classList.add('d-none');
+        chartContainer.classList.remove('d-none');
+    }
+}
+
+async function updateQualityAnalysis(start_time, end_time, forceRefresh = false) {
+    // 显示加载状态
+    toggleNoDataMessage('Trend', true, false);
+    
+    try {
+        // 如果已经有数据且不是强制刷新，则使用现有数据
+        if (qualityData && !forceRefresh) {
+            console.log('使用缓存数据，不重新获取');
+            updateQualityOverview(qualityData);
+            updateQualityTrendChart(qualityData);
+            updateQualityTable(qualityData);
+            updateQualityInsights(qualityData);
+            toggleNoDataMessage('Trend', false, true);
+            return qualityData;
+        }
+        
+        // 使用API获取数据
+        let data = await fetchAnalysisData('quality-analysis', {
+            start_time: start_time,
+            end_time: end_time,
+            stable: true,  // 告诉后端维持数据稳定性
+            cache_key: sessionStorage.getItem('qualityDataCacheKey') || Date.now().toString() // 提供缓存键
+        });
+        
+        // 检查API返回的数据是否有效
+        const hasValidData = data && typeof data.total_products !== 'undefined';
+        
+        // 如果没有有效数据且没有已存在的缓存数据，使用虚拟数据
+        if (!hasValidData) {
+            if (qualityData) {
+                // 如果已有数据，继续使用现有数据
+                console.log('API返回的质量数据无效，继续使用现有数据');
+                data = qualityData;
+            } else {
+                // 否则生成虚拟数据
+                console.log('API返回的质量数据无效，使用虚拟数据');
+                data = generateVirtualQualityData();
+                isVirtualData = true;
+                showToast('使用虚拟数据进行质量分析演示', 'warning');
+                
+                // 保存一个新的缓存键
+                const newCacheKey = Date.now().toString();
+                sessionStorage.setItem('qualityDataCacheKey', newCacheKey);
+            }
+        } else {
+            // 保存一个新的缓存键
+            if (forceRefresh) {
+                const newCacheKey = Date.now().toString();
+                sessionStorage.setItem('qualityDataCacheKey', newCacheKey);
+            }
+            isVirtualData = data.is_virtual || false;
+        }
+        
+        // 保存到全局变量和会话存储
+        qualityData = data;
+        try {
+            sessionStorage.setItem('qualityAnalysisData', JSON.stringify(data));
+        } catch (e) {
+            console.error('无法保存数据到会话存储:', e);
+        }
+        
+        // 更新UI元素
+        updateQualityOverview(data);
+        updateQualityTrendChart(data);
+        updateQualityTable(data);
+        updateQualityInsights(data);
+        
+        return data;
+    } catch (error) {
+        console.error('获取质量分析数据出错:', error);
+        
+        // 如果已有数据，继续使用现有数据
+        if (qualityData) {
+            console.log('出错时继续使用现有质量数据');
+            updateQualityOverview(qualityData);
+            updateQualityTrendChart(qualityData);
+            updateQualityTable(qualityData);
+            updateQualityInsights(qualityData);
+            toggleNoDataMessage('Trend', false, true);
+            showToast('刷新失败，显示现有数据', 'warning');
+            return qualityData;
+        }
+        
+        // 否则尝试从会话存储加载
+        try {
+            const cachedData = sessionStorage.getItem('qualityAnalysisData');
+            if (cachedData) {
+                const parsedData = JSON.parse(cachedData);
+                qualityData = parsedData;
+                isVirtualData = parsedData.is_virtual || false;
+                
+                updateQualityOverview(qualityData);
+                updateQualityTrendChart(qualityData);
+                updateQualityTable(qualityData);
+                updateQualityInsights(qualityData);
+                toggleNoDataMessage('Trend', false, true);
+                showToast('使用缓存数据显示', 'info');
+                return qualityData;
+            }
+        } catch (e) {
+            console.error('无法从会话存储加载数据:', e);
+        }
+        
+        // 最后使用虚拟数据
+        showToast('获取质量分析数据出错，使用虚拟数据', 'error');
+        const virtualData = generateVirtualQualityData();
+        isVirtualData = true;
+        qualityData = virtualData;
+        
+        // 更新UI元素
+        updateQualityOverview(virtualData);
+        updateQualityTrendChart(virtualData);
+        updateQualityTable(virtualData);
+        updateQualityInsights(virtualData);
+        
+        return virtualData;
+    }
+}
+
+// 修改生成虚拟数据的函数，使其生成稳定数据
+function generateVirtualQualityData() {
+    // 使用固定的种子来生成稳定的随机数据
+    const seed = new Date().getDate(); // 使用当天日期作为种子
+    const seededRandom = function(min, max) {
+        const x = Math.sin(seed * 9999) * 10000;
+        const rand = x - Math.floor(x);
+        return min + rand * (max - min);
+    };
+    
+    const totalProducts = Math.floor(2000 + seededRandom(0, 1000));
+    const qualityRate = 94 + seededRandom(0, 6); // 94% - 100%
+    const qualifiedProducts = Math.floor(totalProducts * qualityRate / 100);
+    
+    // 缺陷分类数据
+    const defectRate = 100 - qualityRate;
+    const defectCategories = {
+        '材料问题': Math.round(defectRate * 0.3 * 100) / 100,
+        '工艺问题': Math.round(defectRate * 0.4 * 100) / 100,
+        '操作失误': Math.round(defectRate * 0.2 * 100) / 100,
+        '设备故障': Math.round(defectRate * 0.1 * 100) / 100
+    };
+    
+    // 过程能力指数
+    const processCapability = {
+        'Cpk': Math.round((1.0 + qualityRate / 100) * 100) / 100,
+        'Ppk': Math.round((0.9 + qualityRate / 110) * 100) / 100,
+        'Sigma': Math.round((3 + qualityRate / 100 * 3) * 100) / 100
+    };
+    
+    return {
+        total_products: totalProducts,
+        qualified_products: qualifiedProducts,
+        quality_rate: Math.round(qualityRate * 100) / 100,
+        defect_rate: Math.round(defectRate * 100) / 100,
+        daily_trend: generateStableDailyTrend(seed),
+        defect_categories: defectCategories,
+        process_capability: processCapability,
+        is_virtual: true  // 标记为虚拟数据
+    };
+}
+
+// 生成稳定的日趋势数据
+function generateStableDailyTrend(seed) {
+    const days = 7;
+    const result = [];
+    
+    const seededRandom = function(day, min, max) {
+        const x = Math.sin((seed + day) * 9999) * 10000;
+        const rand = x - Math.floor(x);
+        return min + rand * (max - min);
+    };
+    
+    for (let i = 0; i < days; i++) {
+        const date = moment().subtract(days - i - 1, 'days').format('YYYY-MM-DD');
+        const totalProducts = Math.floor(250 + seededRandom(i, 0, 150));
+        const qualityRate = 92 + seededRandom(i, 0, 8);
+        const qualifiedProducts = Math.floor(totalProducts * qualityRate / 100);
+        
+        result.push({
+            date: date,
+            total_products: totalProducts,
+            qualified_products: qualifiedProducts,
+            quality_rate: Math.round(qualityRate * 100) / 100,
+            defect_rate: Math.round((100 - qualityRate) * 100) / 100
+        });
+    }
+    
+    return result;
+}
+
+// 更新质量概览区域
+function updateQualityOverview(data) {
+    document.getElementById('totalProducts').textContent = data.total_products.toLocaleString();
+    document.getElementById('qualifiedProducts').textContent = data.qualified_products.toLocaleString();
+    document.getElementById('defectRate').textContent = data.defect_rate.toFixed(2) + '%';
+    document.getElementById('qualityRate').textContent = data.quality_rate.toFixed(2) + '%';
+}
+
+// 更新质量分布图表
+function updateQualityDistributionChart(data) {
+    if (qualityDistributionChart) {
+        qualityDistributionChart.destroy();
+    }
+    
+    const total = data.total_products;
+    const qualified = data.qualified_products;
+    const defective = total - qualified;
+    
+    // 检查数据有效性
+    if (total <= 0 || (qualified === 0 && defective === 0)) {
+        toggleNoDataMessage('Distribution', false, false);
+        return;
+    }
+    
+    const ctx = document.getElementById('qualityDistributionChart').getContext('2d');
+    qualityDistributionChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['合格品', '不合格品'],
+            datasets: [{
+                data: [qualified, defective],
+                backgroundColor: [
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(255, 99, 132, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(255, 99, 132, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const percentage = Math.round((value / total) * 100);
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            animation: {
+                animateScale: true,
+                animateRotate: true
+            }
+        }
+    });
+    
+    toggleNoDataMessage('Distribution', false, true);
+}
+
+// 更新质量趋势图表
+function updateQualityTrendChart(data) {
+    if (qualityTrendChart) {
+        qualityTrendChart.destroy();
+    }
+    
+    // 优先使用每日趋势数据，如果没有则创建一个简单的对比图
+    let chartType = 'bar';
+    let chartData = {};
+    let chartOptions = {};
+    
+    if (data.daily_trend && data.daily_trend.length > 0) {
+        // 使用时间序列数据
+        const dates = data.daily_trend.map(d => d.date);
+        const qualityRates = data.daily_trend.map(d => d.quality_rate);
+        const defectRates = data.daily_trend.map(d => d.defect_rate);
+        
+        chartType = 'line';
+        chartData = {
+            labels: dates,
+            datasets: [
+                {
+                    label: '质量合格率 (%)',
+                    data: qualityRates,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: '不合格率 (%)',
+                    data: defectRates,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        };
+        
+        chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: '日期'
+                    }
+                },
+                y: {
+                    suggestedMin: 80,
+                    suggestedMax: 100,
+                    title: {
+                        display: true,
+                        text: '比率 (%)'
+                    }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                intersect: false
+            }
+        };
+    } else {
+        // 使用简单的对比图
+        chartType = 'bar';
+        chartData = {
+            labels: ['质量指标'],
+            datasets: [
+                {
+                    label: '合格率',
+                    data: [data.quality_rate],
+                    backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: '不合格率',
+                    data: [data.defect_rate],
+                    backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }
+            ]
+        };
+        
+        chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.raw.toFixed(2)}%`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    suggestedMin: 0,
+                    suggestedMax: 100,
+                    title: {
+                        display: true,
+                        text: '比率 (%)'
+                    }
+                }
+            }
+        };
+    }
+    
+    const ctx = document.getElementById('qualityTrendChart').getContext('2d');
+    qualityTrendChart = new Chart(ctx, {
+        type: chartType,
+        data: chartData,
+        options: chartOptions
+    });
+    
+    toggleNoDataMessage('Trend', false, true);
+}
+
+// 更新质量表格
+function updateQualityTable(data) {
+    const tableBody = document.getElementById('qualityTable');
+    tableBody.innerHTML = '';
+    
+    const row = document.createElement('tr');
+    const defectiveCount = data.total_products - data.qualified_products;
+    
+    row.innerHTML = `
+        <td>产品质量</td>
+        <td>${data.total_products.toLocaleString()}</td>
+        <td>${data.qualified_products.toLocaleString()}</td>
+        <td>${defectiveCount.toLocaleString()}</td>
+        <td>${data.defect_rate.toFixed(2)}%</td>
+        <td>${data.quality_rate.toFixed(2)}%</td>
+        <td>${isVirtualData ? '<span class="badge bg-warning">虚拟数据</span>' : '<span class="badge bg-success">导入数据</span>'}</td>
+    `;
+    tableBody.appendChild(row);
+}
+
+// 更新质量洞察
+function updateQualityInsights(data) {
+    const insightsContainer = document.getElementById('qualityInsights');
+    
+    // 计算一些指标
+    const defectRate = data.defect_rate;
+    const qualityRate = data.quality_rate;
+    const defectiveCount = data.total_products - data.qualified_products;
+    
+    // 基于数据生成洞察
+    let insights = '';
+    if (qualityRate >= 98) {
+        insights += `<div class="alert alert-success">
+            <h5><i class="fas fa-award"></i> 优异质量表现</h5>
+            <p>当前质量合格率为 <strong>${qualityRate.toFixed(2)}%</strong>，达到了优秀水平。继续保持现有的质量控制措施。</p>
+        </div>`;
+    } else if (qualityRate >= 95) {
+        insights += `<div class="alert alert-info">
+            <h5><i class="fas fa-check-circle"></i> 良好质量表现</h5>
+            <p>当前质量合格率为 <strong>${qualityRate.toFixed(2)}%</strong>，处于良好水平，但仍有改进空间。</p>
+        </div>`;
+    } else if (qualityRate >= 90) {
+        insights += `<div class="alert alert-warning">
+            <h5><i class="fas fa-exclamation-triangle"></i> 需要注意的质量问题</h5>
+            <p>当前质量合格率为 <strong>${qualityRate.toFixed(2)}%</strong>，低于行业标准，需要改进质量控制流程。</p>
+            <p>建议对生产工艺进行审核，加强质量检测环节。</p>
+        </div>`;
+    } else {
+        insights += `<div class="alert alert-danger">
+            <h5><i class="fas fa-exclamation-circle"></i> 严重质量问题警告</h5>
+            <p>当前质量合格率为 <strong>${qualityRate.toFixed(2)}%</strong>，明显低于可接受标准。</p>
+            <p>建议暂停生产线检查，全面审核生产工艺和质量控制流程。</p>
+        </div>`;
+    }
+    
+    // 添加额外洞察
+    if (defectiveCount > 0) {
+        insights += `<div class="alert alert-secondary">
+            <h5><i class="fas fa-chart-bar"></i> 质量损失分析</h5>
+            <p>当前不合格产品数量为 <strong>${defectiveCount.toLocaleString()}</strong> 件，占总产量的 <strong>${defectRate.toFixed(2)}%</strong>。</p>
+            <p>如果将不合格率降低 1%，预计可以增加 <strong>${Math.round(data.total_products * 0.01).toLocaleString()}</strong> 件合格产品。</p>
+        </div>`;
+    }
+    
+    // 添加日期趋势洞察
+    if (data.daily_trend && data.daily_trend.length > 0) {
+        // 计算趋势
+        const sortedTrend = [...data.daily_trend].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const firstDay = sortedTrend[0];
+        const lastDay = sortedTrend[sortedTrend.length - 1];
+        const qualityTrend = lastDay.quality_rate - firstDay.quality_rate;
+        
+        if (Math.abs(qualityTrend) >= 1) {
+            const trendIcon = qualityTrend > 0 ? 'fa-chart-line text-success' : 'fa-chart-line-down text-danger';
+            const trendDesc = qualityTrend > 0 ? '上升' : '下降';
+            const trendClass = qualityTrend > 0 ? 'success' : 'danger';
+            
+            insights += `<div class="alert alert-${trendClass}">
+                <h5><i class="fas ${trendIcon}"></i> 质量趋势分析</h5>
+                <p>在所选时间段内，质量合格率呈现${trendDesc}趋势，变化了 <strong>${Math.abs(qualityTrend).toFixed(2)}%</strong>。</p>
+                <p>从 ${firstDay.date} 的 ${firstDay.quality_rate.toFixed(2)}% 到 ${lastDay.date} 的 ${lastDay.quality_rate.toFixed(2)}%</p>
+            </div>`;
+        } else {
+            insights += `<div class="alert alert-info">
+                <h5><i class="fas fa-equals"></i> 质量趋势分析</h5>
+                <p>在所选时间段内，质量合格率保持稳定，变化不大。</p>
+            </div>`;
+        }
+    }
+    
+    // 添加数据来源提示
+    if (isVirtualData) {
+        insights += `<div class="alert alert-warning">
+            <h5><i class="fas fa-info-circle"></i> 数据来源说明</h5>
+            <p>当前显示的是系统生成的虚拟数据，用于演示目的。要查看实际数据，请导入生产数据。</p>
+        </div>`;
+    }
+    
+    insightsContainer.innerHTML = insights;
+}
+
+// 修改fetchAnalysisData函数，增加缓存控制
+function fetchAnalysisData(endpoint, params) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            const response = await fetch(`/api/${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache' // 防止浏览器缓存
+                },
+                body: JSON.stringify(params)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API响应错误: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            resolve(data);
+        } catch (error) {
+            console.error(`获取${endpoint}数据错误:`, error);
+            reject(error);
+        }
+    });
+}
+</script>
+{% endblock %} 

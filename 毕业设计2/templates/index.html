@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}生产效率分析系统{% endblock %}
+
+{% block page_title %}实时生产效率监控{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">实时设备指标</h5>
+                <div id="loadingIndicator" class="text-center d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>设备ID</th>
+                                <th>更新时间</th>
+                                <th>可用率</th>
+                                <th>性能效率</th>
+                                <th>质量</th>
+                                <th>OEE</th>
+                                <th>TEEP</th>
+                                <th>设备利用率</th>
+                                <th>停机时间(分钟)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="metricsTableBody">
+                            <!-- 动态填充数据 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">OEE趋势图</h5>
+                <div class="chart-container">
+                    <canvas id="oeeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">设备状态对比</h5>
+                <div class="chart-container">
+                    <canvas id="deviceComparisonChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let oeeChart, deviceComparisonChart;
+let lastUpdateTime = new Date();
+let cachedData = null;
+let isUpdating = false;
+const updateInterval = 60000; // 60秒更新一次
+
+function showLoading(show) {
+    const loader = document.getElementById('loadingIndicator');
+    if (show) {
+        loader.classList.remove('d-none');
+    } else {
+        loader.classList.add('d-none');
+    }
+}
+
+function updateMetricsTable(data) {
+    const tbody = document.getElementById('metricsTableBody');
+    if (!data || data.length === 0) return;
+    
+    const fragment = document.createDocumentFragment();
+    data.forEach(metric => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${metric.device_id}</td>
+            <td>${metric.timestamp}</td>
+            <td>${metric.availability}%</td>
+            <td>${metric.performance}%</td>
+            <td>${metric.quality}%</td>
+            <td>${metric.oee}%</td>
+            <td>${metric.teep}%</td>
+            <td>${metric.utilization}%</td>
+            <td>${metric.downtime}</td>
+        `;
+        fragment.appendChild(tr);
+    });
+    
+    tbody.innerHTML = '';
+    tbody.appendChild(fragment);
+}
+
+function updateCharts(data) {
+    if (!data || data.length === 0) return;
+
+    // 使用requestAnimationFrame优化图表渲染
+    requestAnimationFrame(() => {
+        // 更新OEE趋势图
+        if (oeeChart) oeeChart.destroy();
+        oeeChart = new Chart(document.getElementById('oeeChart'), {
+            type: 'line',
+            data: {
+                labels: data.map(d => d.device_id),
+                datasets: [{
+                    label: 'OEE (%)',
+                    data: data.map(d => d.oee),
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 0 // 禁用动画以提高性能
+                }
+            }
+        });
+
+        // 更新设备状态对比图
+        if (deviceComparisonChart) deviceComparisonChart.destroy();
+        deviceComparisonChart = new Chart(document.getElementById('deviceComparisonChart'), {
+            type: 'bar',
+            data: {
+                labels: data.map(d => d.device_id),
+                datasets: [
+                    {
+                        label: '可用率',
+                        data: data.map(d => d.availability),
+                        backgroundColor: 'rgba(255, 99, 132, 0.5)'
+                    },
+                    {
+                        label: '性能效率',
+                        data: data.map(d => d.performance),
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)'
+                    },
+                    {
+                        label: '质量',
+                        data: data.map(d => d.quality),
+                        backgroundColor: 'rgba(75, 192, 192, 0.5)'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 0 // 禁用动画以提高性能
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                }
+            }
+        });
+    });
+}
+
+async function fetchLatestMetrics(force = false) {
+    if (isUpdating && !force) return;
+    isUpdating = true;
+    
+    try {
+        showLoading(true);
+        const response = await fetch('/api/metrics/latest');
+        if (response.ok) {
+            const data = await response.json();
+            cachedData = data;
+            updateMetricsTable(data);
+            updateCharts(data);
+        }
+    } catch (error) {
+        console.error('Error fetching metrics:', error);
+        // 如果获取新数据失败，使用缓存数据
+        if (cachedData) {
+            updateMetricsTable(cachedData);
+            updateCharts(cachedData);
+        }
+    } finally {
+        showLoading(false);
+        isUpdating = false;
+    }
+}
+
+// 页面加载和切换时的优化
+document.addEventListener('DOMContentLoaded', () => {
+    // 立即显示缓存数据（如果有）
+    if (cachedData) {
+        updateMetricsTable(cachedData);
+        updateCharts(cachedData);
+    }
+    
+    // 获取新数据
+    fetchLatestMetrics(true);
+    
+    // 设置定期更新
+    const updateTimer = setInterval(fetchLatestMetrics, updateInterval);
+    
+    // 页面不可见时暂停更新
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            clearInterval(updateTimer);
+        } else {
+            fetchLatestMetrics(true);
+            setInterval(fetchLatestMetrics, updateInterval);
+        }
+    });
+});
+
+// 添加页面切换优化
+document.addEventListener('beforeunload', () => {
+    // 清除图表实例
+    if (oeeChart) oeeChart.destroy();
+    if (deviceComparisonChart) deviceComparisonChart.destroy();
+});
+</script>
+{% endblock %} 
